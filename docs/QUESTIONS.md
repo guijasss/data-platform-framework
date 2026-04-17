@@ -27,3 +27,5 @@
 
 * plug 'n play structure
     - support to data catalogs
+
+* use graphqlite to implement table lineage out-of-the-box

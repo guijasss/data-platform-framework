@@ -1,12 +1,12 @@
-# Constraints
-* based on Delta Lake and Medallion Architecture (MA)
-* every timestamp will be stored in UTC
-
 # Aimings and Philosophy
 * this framework enforces good practices learnt from years with data engineering work, having trouble with inconsistent data, invisible pipelines, low quality data and unhappy consumers.
 * but, definitions like whether to make use of SCD2, what kind of write to do, what fields to use to build a PK and other decisions are up to you to made as a data engineer; you, among everyone in your project, should know your constraints and caveats. This framework only implements abstractions for you to use and speed up development time.
 * almost every problem with data platforms is caused by a lack of schema / data contract. This framework ensures every table has a data contract, which should be built even before any pyspark code has been write.
 * at least this page will not be wrote using AI, 'cause I want to talk directly to you.
+
+# Constraints
+* based on Delta Lake and Medallion Architecture (MA)
+* every timestamp will be stored in UTC
 
 # Medalion Architecture Layers
 
@@ -31,12 +31,13 @@
 * finally, {system}_{entity} granularity is kept.
 * this layer should be cleaned, enriched and transformed as you wish, but NO joins are allowed.
 
-
 ## Gold
 * this layer is commonly made using [Go Horse](https://gohorse.com.br/extreme-go-horse-xgh.html) methodology; don't do that! For building gold layer, I propose the following:
     
 ### dimensional modeling
-maybe you have the "customer" concept in a lot of source systems (ERPs, databases, etc.), but each system calls their properties in different ways: for example, the ERP would call "where the customer lives" as `address`, but the database call it `location`. In this case, you should came up with a consensus about how to call such field. From this, a single and consolidated `Customers` table will arise in the Gold layer. This process of identifying entities and fields will be the building blocks of what is called [Dimensional Modeling](https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/).
+Maybe you have the “customer” concept spread across multiple source systems (ERPs, databases, etc.), but each one names its properties differently. For example, an ERP might refer to “where the customer lives” as address, while a database might call it location. In this case, you should come up with a common definition for that field. From there, a single, consolidated Customers table can be created in the Gold layer.
+
+This process of identifying entities and standardizing their fields forms the foundation of what is known as Dimensional Modeling. Typically, you will work with two types of tables: facts and dimensions. Facts describe what happened (quantitatively), while dimensions provide context and meaning to those facts (qualitatively).
 
 ### feature store
 
