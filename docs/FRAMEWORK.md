@@ -23,6 +23,7 @@
     * FULL_OVERWRITE: the entire target table is replaced with incoming data.
 * {system}_{entity} granularity; e.g. `salesforce_customers` or `hubspot_tickets`.
     * it's up to you to name your systems and entities, but remember, only ONE system-entity pair by table.
+* spreadsheet data is often schemaless and not structured, so, I like to put it in a special schema called `external`. In this case, the {system}_{entity} pair is `external_{sheet_name}`.
 
 ## Silver
 * like bronze layer, should have `id` and `processed_at` columns.
