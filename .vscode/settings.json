@@ -1,0 +1,10 @@
+{
+    "yaml.schemas": {
+        "/home/guijas/gui/dev/data-platform-framework/config.schema.json": [
+            "config.example.yaml",
+            "config.example.yml",
+            "config.yaml",
+            "config.yml"
+        ]
+    }
+}

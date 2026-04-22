@@ -1,0 +1,33 @@
+app:
+    name: Data Platform
+    version: 1.0
+    enabled: true
+    retries: 3
+    timeout: 15.5
+    owner: null
+
+  database:
+    host: localhost
+    port: 5432
+    credentials:
+      username: admin
+      password: secret123
+
+  services:
+    - name: api
+      replicas: 2
+      tags:
+        - public
+        - v1
+    - name: worker
+      replicas: 4
+      tags:
+        - internal
+        - batch
+
+  features:
+    logging: true
+    modes:
+      - dev
+      - staging
+      - production

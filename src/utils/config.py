@@ -1,3 +1,7 @@
+from pathlib import Path
+import os
+
 from pyspark.sql import SparkSession
 
-SPARK = SparkSession.builder.getOrCreate()
+
+SPARK = None
