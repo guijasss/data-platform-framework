@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Generated schema for Root",
   "type": "object",
   "properties": {
-    "track_table_lineage": {
-      "type": "boolean"
+    "app_name": {
+      "type": "string"
+    },
+    "port": {
+      "type": "integer"
     }
   },
-  "required": [
-    "track_table_lineage"
-  ]
+  "required": ["app_name"]
 }
