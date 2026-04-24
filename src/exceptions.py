@@ -1,0 +1,2 @@
+class TableDoesNotExistException(Exception):
+    pass

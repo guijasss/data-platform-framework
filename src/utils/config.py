@@ -1,7 +1,5 @@
-from pathlib import Path
-import os
-
 from pyspark.sql import SparkSession
 
 
-SPARK = None
+SPARK: SparkSession = SparkSession.builder.getOrCreate()
+WATERMARK_COLUMN = "processed_at"

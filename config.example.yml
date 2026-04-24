@@ -1,5 +1,6 @@
 workspace:
   catalog: mycatalog
+  data_contracts_path: ./metadata/
 
 metadata:
   enable_lineage_tracking: true
