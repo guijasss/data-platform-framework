@@ -7,6 +7,8 @@
 # Constraints
 * based on Delta Lake and Medallion Architecture (MA)
 * every timestamp will be stored in UTC
+* every table downstream to bronze layer should have a data contract, no exceptions.
+
 
 # Medalion Architecture Layers
 
@@ -17,10 +19,11 @@
     * `id`: primary key, surrogate key or natural key used to identify each row, therefore, it must be unique.
     * `processed_at`: when row arrived in table (i.e. when that particular row was last inserted or updated).
         * NOTE: if that column is not provided, it will be infered using `current_timestamp()` function. 
-* only three accepted write modes
+* four accepted write modes
     * APPEND: new records are appended to the table. Useful when data doesn't have a incremental field, but you want to save historical changes.
     * INCREMENTAL: executes a MERGE statement, based on a unique primary key (PK) field, where, if that PK exists, row is updated, otherwise, it's inserted
     * FULL_OVERWRITE: the entire target table is replaced with incoming data.
+    * SCD2: table historical inserts and updates are kept. 
 * {system}_{entity} granularity; e.g. `salesforce_customers` or `hubspot_tickets`.
     * it's up to you to name your systems and entities, but remember, only ONE system-entity pair by table.
 * spreadsheet data is often schemaless and not structured, so, I like to put it in a special schema called `external`. In this case, the {system}_{entity} pair is `external_{sheet_name}`.
