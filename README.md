@@ -137,6 +137,10 @@ As data needs evolve, users should be able to:
 - integrate with other tools
 - migrate to more scalable systems without losing foundational discipline
 
+## Tech Stack
+* SQLAlchemy for database reading and writing
+* Polars for data processing
+
 ## Contributing
 
 This is an open-source project. Contributions are welcome in the form of:
