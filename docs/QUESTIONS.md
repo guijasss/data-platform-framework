@@ -34,3 +34,4 @@
     - compare dataframes
     - code coverage reports
     
+* implement migrations

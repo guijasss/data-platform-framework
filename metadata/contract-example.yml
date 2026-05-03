@@ -1,0 +1,18 @@
+table: curated.dim_sales
+owner: engineering@acme.com
+sla:
+  freshness: 1d
+schema:
+  - column: id
+    type: string
+
+  - column: processed_at
+    type: timestamp
+
+  - column: value
+    type: double
+
+quality_rules:
+  - id IS NOT NULL # implicit
+  - processed_at IS NOT NULL # implicit
+  - value > 0
