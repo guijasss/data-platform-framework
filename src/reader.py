@@ -1,62 +1,52 @@
-from __future__ import annotations
+from dataclasses import dataclass
+from typing import Literal, Optional
 
-from importlib import import_module
-from typing import Any
+from polars import DataFrame
 
-from src.exceptions import TableDoesNotExistException
-
-
-def read_table(
-    connection: Any,
-    table_name: str,
-    where: str | None = None,
-) -> Any:
-    if not table_name or not table_name.strip():
-        raise ValueError("table_name must be a non-empty string")
-
-    if connection is None:
-        raise ValueError("connection is required")
-
-    if not _table_exists(connection, table_name):
-        raise TableDoesNotExistException(table_name)
-
-    polars = _load_polars()
-    query = _build_select_query(table_name, where)
-    return polars.read_database(query=query, connection=connection)
+from src.database import table_exists
 
 
-def _table_exists(connection: Any, table_name: str) -> bool:
-    sqlalchemy = _load_sqlalchemy()
-    schema, table = _split_table_name(table_name)
-    inspector = sqlalchemy.inspect(connection)
-    return bool(inspector.has_table(table_name=table, schema=schema))
+read_methods = ["INCREMENTAL", "FULL_LOAD"]
+ReadMethod = Literal[*read_methods]
+
+@dataclass
+class ReadConfig:
+    source_table: str
+    method: str
+    target_table: Optional[str]
 
 
-def _build_select_query(table_name: str, where: str | None = None) -> str:
-    query = f"SELECT * FROM {table_name}"
-    if where and where.strip():
-        query = f"{query} WHERE {where.strip()}"
-    return query
+def _run_validations(config: ReadConfig) -> None:
+    validations: list = [
+        _valid_read_method(config.method)
+        
+    ]
+
+    while validations:
+        error_message = validations.pop(0)
+        if error_message:
+            raise ValueError(error_message)
 
 
-def _split_table_name(table_name: str) -> tuple[str | None, str]:
-    parts = [part.strip() for part in table_name.split(".") if part.strip()]
-    if len(parts) == 1:
-        return None, parts[0]
-    if len(parts) == 2:
-        return parts[0], parts[1]
-    raise ValueError("table_name must follow the format <table> or <schema>.<table>")
+def _valid_read_method(method: str | None) -> str | None:
+    if method not in read_methods:
+        return f"Invalid read method: {method}. Options are: {read_methods}"
+
+    return None
+
+def _read_incremental(source_table: str) -> DataFrame: ...
+def _read_full_load() -> DataFrame: ...
 
 
-def _load_polars() -> Any:
-    try:
-        return import_module("polars")
-    except ModuleNotFoundError as exc:  # pragma: no cover
-        raise RuntimeError("polars is required to read tables") from exc
+def read(config: ReadConfig) -> DataFrame:
+    _run_validations(config)
 
+    read_methods_callable_mapping = {
+        "FULL_LOAD": _read_full_load,
+        "INCREMENTAL": _read_incremental
+    }
 
-def _load_sqlalchemy() -> Any:
-    try:
-        return import_module("sqlalchemy")
-    except ModuleNotFoundError as exc:  # pragma: no cover
-        raise RuntimeError("sqlalchemy is required to inspect tables") from exc
+    if not table_exists(config.target_table):
+        return _read_full_load(config)
+    
+    return read_methods_callable_mapping[config.method](config)

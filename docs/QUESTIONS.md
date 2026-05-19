@@ -1,7 +1,3 @@
-* how to structure transformation pipelines in silver?
-    - expose spark dataframe api or encapsulate it somehow?
-    - pros and cons?
-
 * data contract model
 
 * it makes sense to implement ci/cd?
@@ -10,12 +6,7 @@
 * how to implement tests?
     - pipeline stress test
         * increasing load, how would pipeline scale?
-        * considering execution time, spark cluster resources, etc.
-        
-* how to structure options?
-    - globally options -> config.yaml
-        * what options are global?
-    - local options -> pyspark code
+        * considering execution time, database resources, etc.
 
 * what will be project name?
 
@@ -34,4 +25,9 @@
     - compare dataframes
     - code coverage reports
     
-* implement migrations
+* qual seria o público alvo?
+    - developers e data engineers
+    - como precificar?
+    - como implantar?
+
+* ficar de olho
