@@ -9,4 +9,7 @@
 
 # Phase 2: Enhancements
 * data quality constraints (on write)
-* ...
+
+# Phase 3: Towards a Data Platform
+* connectors to main data sources
+  - meltano

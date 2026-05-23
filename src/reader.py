@@ -1,25 +1,39 @@
 from dataclasses import dataclass
-from typing import Literal, Optional
+from datetime import datetime
+from typing import get_args, List, Literal, Optional
 
-from polars import DataFrame
+from polars import LazyFrame
 
-from src.database import table_exists
+from src.database import get_table_watermark, read_table, table_exists
+from src.protocols import WATERMARK_COLUMN
 
 
-read_methods = ["INCREMENTAL", "FULL_LOAD"]
-ReadMethod = Literal[*read_methods]
+ReadMethod = Literal["INCREMENTAL", "FULL_LOAD"]
+
+@dataclass(frozen=True)
+class CONSTANTS:
+    methods = get_args(ReadMethod)
+    target_watermark_column = "processed_at"
 
 @dataclass
 class ReadConfig:
     source_table: str
-    method: str
-    target_table: Optional[str]
+    target_table: str
+    method: ReadMethod
+    source_watermark_column: str
+    columns: Optional[List[str]] = None
+
+
+def _valid_read_method(method: str | None) -> str | None:
+    if method not in CONSTANTS.methods:
+        return f"Invalid read method: {method}. Options are: {CONSTANTS.methods}"
+
+    return None
 
 
 def _run_validations(config: ReadConfig) -> None:
     validations: list = [
         _valid_read_method(config.method)
-        
     ]
 
     while validations:
@@ -28,17 +42,26 @@ def _run_validations(config: ReadConfig) -> None:
             raise ValueError(error_message)
 
 
-def _valid_read_method(method: str | None) -> str | None:
-    if method not in read_methods:
-        return f"Invalid read method: {method}. Options are: {read_methods}"
+def _read_incremental(config: ReadConfig) -> LazyFrame:
+    watermark_value: datetime = get_table_watermark(config.target_table)
+    
+    base_reader = read_table(
+        table=config.source_table,
+        columns=config.columns,
+        where=[f"{WATERMARK_COLUMN} > {watermark_value}"]
+    )
 
-    return None
-
-def _read_incremental(source_table: str) -> DataFrame: ...
-def _read_full_load() -> DataFrame: ...
+    return base_reader
 
 
-def read(config: ReadConfig) -> DataFrame:
+def _read_full_load(config: ReadConfig) -> LazyFrame:
+    return read_table(
+        table=config.source_table,
+        columns=config.columns
+    )
+
+
+def read(config: ReadConfig) -> LazyFrame:
     _run_validations(config)
 
     read_methods_callable_mapping = {

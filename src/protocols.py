@@ -1,0 +1,1 @@
+WATERMARK_COLUMN = "processed_at"

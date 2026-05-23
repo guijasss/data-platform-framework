@@ -7,6 +7,12 @@
 # Reader
 * allow read only selected columns, not everything
 
+# Catalog
+
+# Database
+* Database URI can be visible to developers
+* Control permission levels
+
 # CLI
 * fw contract init
     - inicializa um novo data contract

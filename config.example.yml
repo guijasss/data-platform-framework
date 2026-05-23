@@ -2,16 +2,6 @@ workspace:
   catalog: mycatalog
   data_contracts_path: ./metadata/
 
-metadata:
-  enable_lineage_tracking: true
-
-spark:
-  session:
-    app_name: data-platform-framework
-    master: local[*]
-    configs:
-      spark.sql.defaultCatalog: mycatalog
-      spark.sql.catalog.mycatalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
-      spark.sql.catalog.mycatalog.type: hadoop
-      spark.sql.catalog.mycatalog.warehouse: file:///tmp/delta/mycatalog
-      spark.sql.warehouse.dir: file:///tmp/spark-warehouse
+catalog:
+  enable: true
+  lineage_tracking: true
