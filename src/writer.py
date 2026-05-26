@@ -1,105 +1,72 @@
-from __future__ import annotations
+from dataclasses import dataclass
+from typing import get_args, Literal, Mapping, Optional
 
-from contextlib import suppress
-from typing import Any
-from uuid import uuid4
+from polars import LazyFrame
 
-from src import database
-
-
-def write_table(
-    connection: Any,
-    table_name: str,
-    df: Any,
-    mode: str = "append",
-) -> None:
-    database.validate_connection(connection)
-    normalized_table_name = database.validate_table_name(table_name)
-    database.validate_dataframe(df)
-    normalized_mode = database.normalize_write_mode(mode)
-
-    df.write_database(
-        table_name=normalized_table_name,
-        connection=connection,
-        if_table_exists=normalized_mode,
-    )
+from src.database.connection import execute_sql, make_engine, table_exists
+from src.database.helpers import generate_create_table_sql
 
 
-def write_dataset(
-    connection: Any,
-    table_name: str,
-    df: Any,
-    mode: str = "append",
-    primary_key: str = "id",
-) -> None:
-    normalized_mode = database.normalize_framework_write_mode(mode)
+WriteMethod = Literal["APPEND", "MERGE", "OVERWRITE"]
 
-    if normalized_mode == "append":
-        write_table(connection=connection, table_name=table_name, df=df, mode="append")
-        return
 
-    if normalized_mode == "full_overwrite":
-        write_table(
-            connection=connection,
-            table_name=table_name,
-            df=df,
-            mode="replace",
+@dataclass(frozen=True)
+class CONSTANTS:
+    methods = get_args(WriteMethod)
+
+
+@dataclass
+class WriteConfig:
+    target_table: str
+    method: WriteMethod
+    data: LazyFrame
+    comments: Optional[Mapping[str,str]]
+
+
+def _run_validations(config: WriteConfig) -> None:
+    validations: list = [
+
+    ]
+
+    while validations:
+        error_message = validations.pop(0)
+        if error_message:
+            raise ValueError(error_message)
+        
+
+def _write_append(config: WriteConfig): ...
+
+def _write_merge(config: WriteConfig): ...
+
+def _write_overwrite(config: WriteConfig):
+    (
+        config.data
+        .collect()
+        .write_database(
+            table_name=config.target_table,
+            connection=make_engine(kind="sqlalchemy"),
+            if_table_exists="replace",
         )
-        return
-
-    merge_table(
-        connection=connection,
-        table_name=table_name,
-        df=df,
-        key_columns=[primary_key],
     )
 
 
-def merge_table(
-    connection: Any,
-    table_name: str,
-    df: Any,
-    key_columns: list[str] | tuple[str, ...],
-) -> None:
-    database.validate_connection(connection)
-    normalized_table_name = database.validate_table_name(table_name)
-    database.validate_dataframe(df)
+def write(config: WriteConfig) -> LazyFrame:
+    _run_validations(config)
 
-    normalized_key_columns = [column.strip() for column in key_columns if column.strip()]
-    if not normalized_key_columns:
-        raise ValueError("key_columns must contain at least one non-empty column")
+    write_methods_callable_mapping = {
+        "APPEND": _write_append,
+        "MERGE": _write_merge,
+        "OVERWRITE": _write_overwrite
+    }
 
-    if not database.table_exists(connection, normalized_table_name):
-        write_table(
-            connection=connection,
-            table_name=normalized_table_name,
-            df=df,
-            mode="append",
+    if not table_exists(config.target_table):
+        create_table_statement: str = generate_create_table_sql(
+            data=config.data,
+            table_name=config.target_table,
+            column_comments=config.comments
         )
-        return
-
-    staging_table_name = f"{normalized_table_name}__staging_{uuid4().hex[:8]}"
-    write_table(
-        connection=connection,
-        table_name=staging_table_name,
-        df=df,
-        mode="replace",
-    )
-
-    sqlalchemy = database.load_sqlalchemy()
-    merge_query = database.build_merge_query(
-        table_name=normalized_table_name,
-        staging_table_name=staging_table_name,
-        columns=list(df.columns),
-        key_columns=normalized_key_columns,
-    )
-
-    if hasattr(connection, "begin"):
-        with connection.begin() as active_connection:
-            active_connection.execute(sqlalchemy.text(merge_query))
-    else:
-        connection.execute(sqlalchemy.text(merge_query))
-
-    drop_statement = sqlalchemy.text(f"DROP TABLE IF EXISTS {staging_table_name}")
-    with suppress(Exception):
-        connection.execute(drop_statement)
+        print("Table doesn't exist! Executing create table statement...", end=" ")
+        execute_sql(create_table_statement)
+        print("Done!")
+    
+    return write_methods_callable_mapping[config.method](config)

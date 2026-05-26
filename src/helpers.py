@@ -1,4 +1,3 @@
-from dataclasses import fields
 from typing import Any, NoReturn, Sequence
 from os import getenv
 

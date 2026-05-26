@@ -4,7 +4,7 @@ from typing import get_args, List, Literal, Optional
 
 from polars import LazyFrame
 
-from src.database import get_table_watermark, read_table, table_exists
+from src.database.connection import get_table_watermark, read_table, table_exists
 from src.protocols import WATERMARK_COLUMN
 
 
@@ -18,9 +18,9 @@ class CONSTANTS:
 @dataclass
 class ReadConfig:
     source_table: str
-    target_table: str
     method: ReadMethod
-    source_watermark_column: str
+    target_table: Optional[str] = None
+    source_watermark_column: Optional[str] = None
     columns: Optional[List[str]] = None
 
 
@@ -69,7 +69,10 @@ def read(config: ReadConfig) -> LazyFrame:
         "INCREMENTAL": _read_incremental
     }
 
-    if not table_exists(config.target_table):
+    if not table_exists(config.source_table):
+        raise ValueError(f"Table {config.source_table} doesn't exist!")
+
+    if not table_exists(config.target_table or "raw.default"):
         return _read_full_load(config)
     
     return read_methods_callable_mapping[config.method](config)

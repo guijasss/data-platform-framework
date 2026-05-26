@@ -1,20 +1,24 @@
-from typing import Literal, Optional, Sequence
+from typing import Any, Literal, Optional, Sequence
 from datetime import datetime
 
-from polars import col, LazyFrame, read_database_uri
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import Result
 from sqlalchemy.engine.base import Engine
+from polars import col, LazyFrame, read_database_uri
 
 from src.helpers import get_env_or_raise
 from src.protocols import WATERMARK_COLUMN
 
 
-def make_engine() -> Engine:
-    return create_engine(_build_full_uri(kind="sqlalchemy"))
+ConnectionKind = Literal["sqlalchemy", "polars"]
+
+
+def make_engine(kind: ConnectionKind) -> Engine:
+    return create_engine(_build_full_uri(kind=kind))
 
 
 def table_exists(full_table_name: str) -> bool:
-    engine = make_engine()
+    engine = make_engine(kind="sqlalchemy")
     insp = inspect(engine)
 
     schema, table = full_table_name.split(".")
@@ -52,14 +56,24 @@ def _build_full_uri(kind: Literal["sqlalchemy", "polars"]) -> str:
     return uri_format_mapping.get(kind)
 
 
+def execute_sql(
+    query: str,
+    params: dict[str, Any] | None = None,
+) -> Result:
+    engine = make_engine(kind="sqlalchemy")
+
+    with engine.begin() as connection:
+        return connection.execute(
+            text(query),
+            params or {},
+        )
+
+
 def read_table(
     table: str,
     columns: Optional[Sequence[str]] = None,
     where: Optional[Sequence[str]] = None,
 ) -> LazyFrame:
-
-    if not table_exists(table):
-        raise ValueError(f"Tabela não existe: {table}")
 
     if columns:
         selected_columns = ", ".join(columns)
