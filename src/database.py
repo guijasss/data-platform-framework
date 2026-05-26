@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Literal, Optional, Sequence
 from datetime import datetime
 
 from polars import col, LazyFrame, read_database_uri
@@ -10,13 +10,16 @@ from src.protocols import WATERMARK_COLUMN
 
 
 def make_engine() -> Engine:
-    return create_engine(_build_full_uri())
+    return create_engine(_build_full_uri(kind="sqlalchemy"))
 
 
-def table_exists(table_name: str) -> bool:
+def table_exists(full_table_name: str) -> bool:
     engine = make_engine()
     insp = inspect(engine)
-    return insp.has_table(table_name)
+
+    schema, table = full_table_name.split(".")
+
+    return insp.has_table(table, schema=schema)
 
 
 def get_table_watermark(table_name: str) -> datetime | None:
@@ -31,12 +34,22 @@ def get_table_watermark(table_name: str) -> datetime | None:
 
     return result.item()
 
-def _build_full_uri() -> str:
+
+def _build_full_uri(kind: Literal["sqlalchemy", "polars"]) -> str:
     host = get_env_or_raise("DATABASE_HOST")
     user = get_env_or_raise("DATABASE_USER")
     password = get_env_or_raise("DATABASE_PASSWORD")
     database = get_env_or_raise("DATABASE_NAME")
-    return f"postgresql+psycopg://{user}:{password}@{host}/{database}"
+
+    uri_format_mapping = {
+        "polars": f"postgresql://{user}:{password}@{host}:5432/{database}",
+        "sqlalchemy": f"postgresql+psycopg://{user}:{password}@{host}:5432/{database}"
+    }
+
+    if not kind in uri_format_mapping:
+        raise ValueError(f"Invalid kind of connection: {kind}")
+
+    return uri_format_mapping.get(kind)
 
 
 def read_table(
@@ -44,8 +57,6 @@ def read_table(
     columns: Optional[Sequence[str]] = None,
     where: Optional[Sequence[str]] = None,
 ) -> LazyFrame:
-    engine = make_engine()
-    inspector = inspect(engine)
 
     if not table_exists(table):
         raise ValueError(f"Tabela não existe: {table}")
@@ -68,6 +79,6 @@ def read_table(
 
     return read_database_uri(
         query=query,
-        uri=_build_full_uri(),
-        engine="connectorx",
+        uri=_build_full_uri(kind="polars"),
+        engine="connectorx"
     ).lazy()

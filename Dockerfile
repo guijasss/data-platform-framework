@@ -12,7 +12,8 @@ RUN pip install --no-cache-dir \
     "pyarrow>=18.1.0" \
     "sqlalchemy>=2.0.49" \
     "pyyaml>=6.0.2" \
-    "psycopg[binary]>=3.2.9"
+    "psycopg[binary]>=3.2.9" \
+    "connectorx>=0.4.5"
 
 COPY src ./src
 COPY demo.py ./demo.py
