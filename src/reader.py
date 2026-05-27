@@ -48,7 +48,7 @@ def _read_incremental(config: ReadConfig) -> LazyFrame:
     base_reader = read_table(
         table=config.source_table,
         columns=config.columns,
-        where=[f"{WATERMARK_COLUMN} > {watermark_value}"]
+        where=[f"{WATERMARK_COLUMN} > '{watermark_value}'"]
     )
 
     return base_reader
