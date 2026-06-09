@@ -25,7 +25,11 @@ class WriteConfig:
 
 def _run_validations(config: WriteConfig) -> None:
     validations: list = [
-
+        (
+            f"Invalid write method: {config.method}. Options are: {CONSTANTS.methods}"
+            if config.method not in CONSTANTS.methods
+            else None
+        )
     ]
 
     while validations:

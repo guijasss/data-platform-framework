@@ -55,8 +55,15 @@ def generate_create_table_sql(
     columns_sql = []
 
     for column_name, dtype in schema.items():
+        if isinstance(dtype, Datetime):
+            postgres_type = "TIMESTAMP"
+        elif isinstance(dtype, Duration):
+            postgres_type = "INTERVAL"
+        else:
+            postgres_type = POLARS_TO_POSTGRES_TYPES.get(dtype, "TEXT")
+
         columns_sql.append(
-            f"    {quote_identifier(column_name)} {POLARS_TO_POSTGRES_TYPES.get(dtype, "TEXT")}"
+            f"    {quote_identifier(column_name)} {postgres_type}"
         )
 
     statements = [

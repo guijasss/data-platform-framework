@@ -1,5 +1,6 @@
 from typing import Any, Literal, Optional, Sequence
 from datetime import datetime
+from os import getenv
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Result
@@ -41,13 +42,14 @@ def get_table_watermark(table_name: str) -> datetime | None:
 
 def _build_full_uri(kind: Literal["sqlalchemy", "polars"]) -> str:
     host = get_env_or_raise("DATABASE_HOST")
+    port = getenv("DATABASE_PORT", "5432")
     user = get_env_or_raise("DATABASE_USER")
     password = get_env_or_raise("DATABASE_PASSWORD")
     database = get_env_or_raise("DATABASE_NAME")
 
     uri_format_mapping = {
-        "polars": f"postgresql://{user}:{password}@{host}:5432/{database}",
-        "sqlalchemy": f"postgresql+psycopg://{user}:{password}@{host}:5432/{database}"
+        "polars": f"postgresql://{user}:{password}@{host}:{port}/{database}",
+        "sqlalchemy": f"postgresql+psycopg://{user}:{password}@{host}:{port}/{database}"
     }
 
     if not kind in uri_format_mapping:

@@ -6,3 +6,4 @@ conf/
 *.py[cod]
 *$py.class
 demo_test.py
+.coverage

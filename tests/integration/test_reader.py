@@ -30,9 +30,7 @@ def test_read_incremental_reads_only_new_rows(database):
 
 
 @pytest.mark.integration
-def test_read_falls_back_to_full_load_when_target_table_does_not_exist(
-    database,
-):
+def test_read_falls_back_to_full_load_when_target_table_does_not_exist(database):
     config = ReadConfig(
         source_table="raw_test.users",
         target_table="silver_test.missing_users",

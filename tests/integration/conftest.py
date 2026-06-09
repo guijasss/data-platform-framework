@@ -16,6 +16,8 @@ def setup_database() -> None:
     engine = make_engine(kind="sqlalchemy")
 
     with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA IF EXISTS raw_test CASCADE"))
+        conn.execute(text("DROP SCHEMA IF EXISTS silver_test CASCADE"))
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS raw_test"))
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS silver_test"))
 

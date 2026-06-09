@@ -25,5 +25,6 @@ dev = [
 pythonpath = ["."]
 testpaths = ["tests"]
 markers = [
+    "unit: tests that do not require external services",
     "integration: tests that require the PostgreSQL test database",
 ]

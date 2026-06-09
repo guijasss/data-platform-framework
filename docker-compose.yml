@@ -35,5 +35,25 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres_test:
+    container_name: postgres_test
+    hostname: postgres_test
+    image: postgres:16-alpine
+    profiles:
+      - test
+    environment:
+      POSTGRES_DB: catalog_test
+      POSTGRES_USER: engineering
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U engineering -d catalog_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
 volumes:
   postgres_data:
