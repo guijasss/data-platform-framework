@@ -3,15 +3,27 @@ from pathlib import Path
 from re import sub
 from typing import Sequence
 
-from src.protocols import DEFAULT_CONTRACTS_DIR, DEFAULT_TASKS_DIR, contract_template, task_template
+from src.protocols import (
+    DEFAULT_CONTRACTS_DIR,
+    DEFAULT_TASKS_DIR,
+    contract_template,
+    task_template,
+)
 
+
+DEFAULT_SCHEMA = "raw"
 
 
 def _parse_table_name(table_name: str) -> tuple[str, str]:
     parts = table_name.split(".")
 
+    if len(parts) == 1 and parts[0]:
+        return DEFAULT_SCHEMA, parts[0]
+
     if len(parts) != 2 or not all(parts):
-        raise ValueError("Table name must use the format <schema>.<table>")
+        raise ValueError(
+            "Table name must use the format <table> or <schema>.<table>"
+        )
 
     return parts[0], parts[1]
 
@@ -39,6 +51,7 @@ def _write_file(path: Path, content: str, force: bool) -> None:
 def init_command(args: Namespace) -> list[Path]:
     schema, table = _parse_table_name(args.target_table)
     safe_table = _safe_python_name(table)
+    target_table = f"{schema}.{table}"
     source_table = args.source_table or f"raw.{table}"
 
     contract_path = args.contracts_dir / schema / f"{table}.yml"
@@ -46,14 +59,14 @@ def init_command(args: Namespace) -> list[Path]:
 
     _write_file(
         contract_path,
-        contract_template(target_table=args.target_table),
+        contract_template(target_table=target_table),
         force=args.force,
     )
     _write_file(
         task_path,
         task_template(
             source_table=source_table,
-            target_table=args.target_table,
+            target_table=target_table,
         ),
         force=args.force,
     )
@@ -74,7 +87,7 @@ def build_parser() -> ArgumentParser:
     )
     init_parser.add_argument(
         "target_table",
-        help="Target table using the format <schema>.<table>.",
+        help="Target table using <table> or <schema>.<table>. Bare table names use raw.",
     )
     init_parser.add_argument(
         "--source-table",

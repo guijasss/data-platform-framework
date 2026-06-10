@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import get_args, Literal, Mapping, Optional
 from logging import getLogger
 
-from polars import LazyFrame, sql_expr
+from polars import LazyFrame, col, sql_expr
 
 from src.database.connection import execute_sql, make_engine, table_exists
 from src.database.helpers import generate_create_table_sql
@@ -44,7 +44,40 @@ def _run_validations(config: WriteConfig) -> None:
         
 
 def _run_data_quality_check(target_table: str, data: LazyFrame) -> None:
-    quality_checks = load_data_contract_yaml(target_table)["quality_rules"]
+    contract = load_data_contract_yaml(target_table)
+
+    for column_contract in contract.get("schema", []):
+        column_name = column_contract["column"]
+
+        if column_contract.get("nullable", True) is False:
+            null_exists = (
+                data
+                .filter(col(column_name).is_null())
+                .limit(1)
+                .collect()
+                .height > 0
+            )
+
+            if null_exists:
+                raise DataQualityError(
+                    f"Column {column_name} failed nullable check"
+                )
+
+        if column_contract.get("unique", False) is True:
+            duplicate_exists = (
+                data
+                .filter(col(column_name).is_duplicated())
+                .limit(1)
+                .collect()
+                .height > 0
+            )
+
+            if duplicate_exists:
+                raise DataQualityError(
+                    f"Column {column_name} failed unique check"
+                )
+
+    quality_checks = contract.get("quality_rules", [])
 
     for check in quality_checks:
         invalid_exists = (

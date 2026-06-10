@@ -9,10 +9,13 @@ def test_parse_table_name_accepts_schema_and_table():
     assert cli._parse_table_name("silver.users") == ("silver", "users")
 
 
+def test_parse_table_name_defaults_bare_table_to_raw_schema():
+    assert cli._parse_table_name("users") == ("raw", "users")
+
+
 @pytest.mark.parametrize(
     "table_name",
     [
-        "users",
         "silver.",
         ".users",
         "catalog.silver.users",
@@ -81,6 +84,25 @@ def test_init_command_creates_contract_and_task(tmp_path):
     assert 'method="OVERWRITE"' in task_path.read_text(encoding="utf-8")
 
 
+def test_init_command_defaults_bare_table_to_raw_schema(tmp_path):
+    args = Namespace(
+        target_table="users",
+        source_table=None,
+        contracts_dir=tmp_path / "metadata" / "contracts",
+        tasks_dir=tmp_path / "tasks",
+        force=False,
+    )
+
+    created_paths = cli.init_command(args)
+
+    contract_path = tmp_path / "metadata" / "contracts" / "raw" / "users.yml"
+    task_path = tmp_path / "tasks" / "raw" / "users.py"
+
+    assert created_paths == [contract_path, task_path]
+    assert "table: raw.users" in contract_path.read_text(encoding="utf-8")
+    assert 'target_table="raw.users"' in task_path.read_text(encoding="utf-8")
+
+
 def test_init_command_uses_custom_source_table_and_safe_task_name(tmp_path):
     args = Namespace(
         target_table="silver.users-2024",
@@ -134,7 +156,7 @@ def test_main_creates_files_and_prints_paths(tmp_path, capsys):
 
 def test_main_exits_for_invalid_table_name():
     with pytest.raises(SystemExit) as error:
-        cli.main(["init", "users"])
+        cli.main(["init", ".users"])
 
     assert error.value.code == 2
 

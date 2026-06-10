@@ -12,6 +12,13 @@ from src.writer import (
 )
 
 
+def _patch_contract(monkeypatch, contract: dict) -> None:
+    monkeypatch.setattr(
+        "src.writer.load_data_contract_yaml",
+        lambda target_table: contract,
+    )
+
+
 def test_write_append_and_merge_are_noops():
     config = WriteConfig(
         target_table="silver.users",
@@ -116,11 +123,13 @@ def test_write_raises_for_unknown_method(monkeypatch):
         write(config)
 
 
-def test_run_data_quality_check_passes_when_all_error_rules_match(monkeypatch):
+def test_run_data_quality_check_passes_when_error_rule_valid_condition_matches_all_rows(
+    monkeypatch,
+):
     data = pl.DataFrame({"value": [1, 2]}).lazy()
-    monkeypatch.setattr(
-        "src.writer.load_data_contract_yaml",
-        lambda target: {
+    _patch_contract(
+        monkeypatch,
+        {
             "quality_rules": [
                 {
                     "name": "positive_value",
@@ -134,11 +143,13 @@ def test_run_data_quality_check_passes_when_all_error_rules_match(monkeypatch):
     _run_data_quality_check("silver.users", data)
 
 
-def test_run_data_quality_check_raises_for_failed_error_rule(monkeypatch):
+def test_run_data_quality_check_raises_when_error_rule_valid_condition_fails(
+    monkeypatch,
+):
     data = pl.DataFrame({"value": [1, -1]}).lazy()
-    monkeypatch.setattr(
-        "src.writer.load_data_contract_yaml",
-        lambda target: {
+    _patch_contract(
+        monkeypatch,
+        {
             "quality_rules": [
                 {
                     "name": "positive_value",
@@ -153,14 +164,37 @@ def test_run_data_quality_check_raises_for_failed_error_rule(monkeypatch):
         _run_data_quality_check("silver.users", data)
 
 
-def test_run_data_quality_check_logs_warning_for_failed_warning_rule(
+def test_run_data_quality_check_passes_when_warning_rule_valid_condition_matches_all_rows(
+    monkeypatch,
+    caplog,
+):
+    data = pl.DataFrame({"value": [1, 2]}).lazy()
+    _patch_contract(
+        monkeypatch,
+        {
+            "quality_rules": [
+                {
+                    "name": "positive_value",
+                    "expression": "value > 0",
+                    "severity": "warning",
+                }
+            ]
+        },
+    )
+
+    _run_data_quality_check("silver.users", data)
+
+    assert "Quality check positive_value failed" not in caplog.text
+
+
+def test_run_data_quality_check_logs_warning_when_warning_rule_valid_condition_fails(
     monkeypatch,
     caplog,
 ):
     data = pl.DataFrame({"value": [1, -1]}).lazy()
-    monkeypatch.setattr(
-        "src.writer.load_data_contract_yaml",
-        lambda target: {
+    _patch_contract(
+        monkeypatch,
+        {
             "quality_rules": [
                 {
                     "name": "positive_value",
@@ -174,6 +208,124 @@ def test_run_data_quality_check_logs_warning_for_failed_warning_rule(
     _run_data_quality_check("silver.users", data)
 
     assert "Quality check positive_value failed" in caplog.text
+
+
+def test_run_data_quality_check_allows_nullable_and_non_unique_columns_by_default(
+    monkeypatch,
+):
+    data = pl.DataFrame(
+        {
+            "id": [1, 1],
+            "description": [None, "valid"],
+        }
+    ).lazy()
+    _patch_contract(
+        monkeypatch,
+        {
+            "schema": [
+                {"column": "id"},
+                {"column": "description"},
+            ],
+        },
+    )
+
+    _run_data_quality_check("silver.users", data)
+
+
+def test_run_data_quality_check_passes_when_nullable_false_column_has_no_nulls(
+    monkeypatch,
+):
+    data = pl.DataFrame(
+        {
+            "id": [1, 2],
+            "name": ["Alice", "Bob"],
+        }
+    ).lazy()
+    _patch_contract(
+        monkeypatch,
+        {
+            "schema": [
+                {"column": "id"},
+                {"column": "name", "nullable": False},
+            ],
+        },
+    )
+
+    _run_data_quality_check("silver.users", data)
+
+
+def test_run_data_quality_check_raises_when_nullable_false_column_has_null(
+    monkeypatch,
+):
+    data = pl.DataFrame(
+        {
+            "id": [1, 2],
+            "name": ["Alice", None],
+        }
+    ).lazy()
+    _patch_contract(
+        monkeypatch,
+        {
+            "schema": [
+                {"column": "id"},
+                {"column": "name", "nullable": False},
+            ],
+        },
+    )
+
+    with pytest.raises(
+        DataQualityError,
+        match="Column name failed nullable check",
+    ):
+        _run_data_quality_check("silver.users", data)
+
+
+def test_run_data_quality_check_passes_when_unique_true_column_has_no_duplicates(
+    monkeypatch,
+):
+    data = pl.DataFrame(
+        {
+            "id": [1, 2],
+            "name": ["Alice", "Alice"],
+        }
+    ).lazy()
+    _patch_contract(
+        monkeypatch,
+        {
+            "schema": [
+                {"column": "id", "unique": True},
+                {"column": "name"},
+            ],
+        },
+    )
+
+    _run_data_quality_check("silver.users", data)
+
+
+def test_run_data_quality_check_raises_when_unique_true_column_has_duplicates(
+    monkeypatch,
+):
+    data = pl.DataFrame(
+        {
+            "id": [1, 1],
+            "name": ["Alice", "Alice"],
+        }
+    ).lazy()
+    _patch_contract(
+        monkeypatch,
+        {
+            "schema": [
+                {"column": "id", "unique": True},
+                {"column": "name"},
+            ],
+        },
+    )
+
+    with pytest.raises(
+        DataQualityError,
+        match="Column id failed unique check",
+    ):
+        _run_data_quality_check("silver.users", data)
 
 
 def test_write_runs_quality_check_before_table_creation(monkeypatch):

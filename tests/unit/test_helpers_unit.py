@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from io import StringIO
+from pathlib import Path
 
 import pytest
 
@@ -41,20 +43,25 @@ def test_validate_required_fields_raises_for_missing_fields():
         validate_required_fields(subject, ["present", "missing"])
 
 
-def test_load_data_contract_yaml_reads_matching_yml_contract(tmp_path, monkeypatch):
-    contract_path = tmp_path / "silver" / "users.yml"
-    contract_path.parent.mkdir()
-    contract_path.write_text(
-        """
+def test_load_data_contract_yaml_reads_matching_contract_without_real_filesystem(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.helpers.Path.glob",
+        lambda self, pattern: [Path("/contracts/silver/users.yml")],
+    )
+    monkeypatch.setattr(
+        "builtins.open",
+        lambda path, mode, encoding: StringIO(
+            """
 table: silver.users
 quality_rules:
   - name: positive_value
     expression: value > 0
     severity: error
-""",
-        encoding="utf-8",
+"""
+        ),
     )
-    monkeypatch.setattr("src.helpers.DEFAULT_CONTRACTS_DIR", tmp_path)
 
     contract = load_data_contract_yaml("silver.users")
 
@@ -62,17 +69,25 @@ quality_rules:
     assert contract["quality_rules"][0]["name"] == "positive_value"
 
 
-def test_load_data_contract_yaml_reads_matching_yaml_contract(tmp_path, monkeypatch):
-    contract_path = tmp_path / "silver" / "users.yaml"
-    contract_path.parent.mkdir()
-    contract_path.write_text("table: silver.users\n", encoding="utf-8")
-    monkeypatch.setattr("src.helpers.DEFAULT_CONTRACTS_DIR", tmp_path)
+def test_load_data_contract_yaml_uses_yml_or_yaml_glob_pattern(monkeypatch):
+    glob_calls = []
+
+    def glob(self, pattern):
+        glob_calls.append(pattern)
+        return [Path("/contracts/silver/users.yaml")]
+
+    monkeypatch.setattr("src.helpers.Path.glob", glob)
+    monkeypatch.setattr(
+        "builtins.open",
+        lambda path, mode, encoding: StringIO("table: silver.users\n"),
+    )
 
     assert load_data_contract_yaml("silver.users") == {"table": "silver.users"}
+    assert glob_calls == ["users.y*ml"]
 
 
-def test_load_data_contract_yaml_raises_when_contract_is_missing(tmp_path, monkeypatch):
-    monkeypatch.setattr("src.helpers.DEFAULT_CONTRACTS_DIR", tmp_path)
+def test_load_data_contract_yaml_raises_when_contract_is_missing(monkeypatch):
+    monkeypatch.setattr("src.helpers.Path.glob", lambda self, pattern: [])
 
     with pytest.raises(DataContractNotFoundError, match="Table silver.users"):
         load_data_contract_yaml("silver.users")
