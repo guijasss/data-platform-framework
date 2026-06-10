@@ -1,18 +1,28 @@
-table: curated.dim_sales
-owner: engineering@acme.com
+table: silver.users
+  owner: engineering@acme.com
+
 sla:
   freshness: 1d
+
 schema:
   - column: id
     type: string
+    nullable: false
+    unique: true
 
   - column: processed_at
     type: timestamp
+    nullable: false
 
   - column: value
     type: double
+    nullable: false
 
 quality_rules:
-  - id IS NOT NULL # implicit
-  - processed_at IS NOT NULL # implicit
-  - value > 0
+  - name: positive_value
+    expression: value > 0
+    severity: error
+
+  - name: contains_valid_values
+    expression: column NOT IN ("INVALID")
+    severity: warning
