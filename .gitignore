@@ -7,3 +7,4 @@ conf/
 *$py.class
 demo_test.py
 .coverage
+uv.lock
