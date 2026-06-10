@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 from typing import get_args, Literal, Mapping, Optional
+from logging import getLogger
 
-from polars import LazyFrame
+from polars import LazyFrame, sql_expr
 
 from src.database.connection import execute_sql, make_engine, table_exists
 from src.database.helpers import generate_create_table_sql
+from src.exceptions import DataQualityError
+from src.helpers import load_data_contract_yaml
 
+
+logger = getLogger(__name__)
 
 WriteMethod = Literal["APPEND", "MERGE", "OVERWRITE"]
 
@@ -38,6 +43,27 @@ def _run_validations(config: WriteConfig) -> None:
             raise ValueError(error_message)
         
 
+def _run_data_quality_check(target_table: str, data: LazyFrame) -> None:
+    quality_checks = load_data_contract_yaml(target_table)["quality_rules"]
+
+    for check in quality_checks:
+        invalid_exists = (
+            data
+            .filter(~sql_expr(check["expression"]))
+            .limit(1)
+            .collect()
+            .height > 0
+        )
+
+        if invalid_exists:
+            message = f"Quality check {check['name']} failed"
+            if check["severity"] == "error":
+                raise DataQualityError(message)
+
+            if check["severity"] == "warning":
+                logger.warning(message)
+
+
 def _write_append(config: WriteConfig): ...
 
 def _write_merge(config: WriteConfig): ...
@@ -56,6 +82,7 @@ def _write_overwrite(config: WriteConfig):
 
 def write(config: WriteConfig) -> LazyFrame:
     _run_validations(config)
+    _run_data_quality_check(config.target_table, config.data)
 
     write_methods_callable_mapping = {
         "APPEND": _write_append,

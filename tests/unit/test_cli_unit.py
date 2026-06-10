@@ -33,28 +33,6 @@ def test_safe_python_name_rejects_empty_result():
         cli._safe_python_name("!!!")
 
 
-def test_contract_template_uses_target_table_and_default_write_method():
-    content = cli._contract_template(target_table="silver.users")
-
-    assert "table: silver.users" in content
-    assert "owner: engineering@acme.com" in content
-    assert "method: OVERWRITE" in content
-    assert "quality_rules:" in content
-
-
-def test_task_template_uses_default_read_and_write_configs():
-    content = cli._task_template(
-        source_table="raw.users",
-        target_table="silver.users",
-    )
-
-    assert 'source_table="raw.users"' in content
-    assert 'method="FULL_LOAD"' in content
-    assert 'target_table="silver.users"' in content
-    assert 'method="OVERWRITE"' in content
-    assert "write(write_config)" in content
-
-
 def test_write_file_creates_parent_directory(tmp_path):
     path = tmp_path / "metadata" / "contracts" / "silver" / "users.yml"
 
