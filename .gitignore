@@ -8,3 +8,6 @@ conf/
 demo_test.py
 .coverage
 uv.lock
+
+metadata/contracts
+tasks/
