@@ -1,3 +1,5 @@
+from polars import col
+
 from src.reader import ReadConfig, read
 from src.writer import WriteConfig, write
 
@@ -7,7 +9,7 @@ read_config = ReadConfig(
     source_watermark_column="created_at"
 )
 
-lf = (read(read_config))
+lf = read(read_config).filter(col("id") > 0)
 
 lf.show()
 

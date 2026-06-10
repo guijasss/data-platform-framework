@@ -13,6 +13,8 @@ services:
       - ./src:/app/src
       - ./demo.py:/app/demo.py
       - ./.env:/app/.env
+      - ./metadata:/app/metadata
+      - ./tasks:/app/tasks
     stdin_open: true
     tty: true
     command: ["sleep", "infinity"]
@@ -29,6 +31,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U engineering -d catalog"]
       interval: 5s
