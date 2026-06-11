@@ -74,7 +74,7 @@ def _run_data_quality_check(target_table: str, data: LazyFrame) -> None:
 
             if duplicate_exists:
                 raise DataQualityError(
-                    f"Column {column_name} failed unique check"
+                    f"Column `{column_name}` failed unique check"
                 )
 
     quality_checks = contract.get("quality_rules", [])

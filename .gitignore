@@ -9,7 +9,7 @@ demo_test.py
 .coverage
 uv.lock
 
-metadata/contracts/*
+metadata/contracts/
 !metadata/contracts/raw/
 metadata/contracts/raw/*
 !metadata/contracts/raw/users_refined.yml
